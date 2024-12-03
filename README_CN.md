@@ -1,10 +1,10 @@
 # external_storage
 
-作者：李俊才（jcLee95）
-邮箱：[291148484@163.com](291148484@163.com)
-描述：一个功能强大的 Flutter 安卓外部存储管理插件，提供完整的文件系统操作、存储设备管理、文件监视和权限处理功能。
-协议：[LICENSE](./LICENSE)
-
+- 作者：李俊才（jcLee95）
+- 邮箱：[291148484@163.com](291148484@163.com)
+- 描述：一个功能强大的 Flutter 安卓外部存储管理插件，提供完整的文件系统操作、存储设备管理、文件监视和权限处理功能。
+- 协议：[LICENSE](./LICENSE)
+- [English](https://github.com/jacklee1995/flutter_external_storage/blob/master/README_CN.md)
 
 ## 功能特点
 
