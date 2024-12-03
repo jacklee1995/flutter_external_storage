@@ -26,16 +26,19 @@ class MethodChannelExternalStorage extends ExternalStoragePlatform {
     switch (call.method) {
       case 'onFileSystemEvent':
         if (_watchEventCallback != null) {
-          final Map<String, dynamic> args = call.arguments;
+          final Map<dynamic, dynamic> args =
+              Map<dynamic, dynamic>.from(call.arguments);
+          final String path = args['path'] as String;
+          final int eventType = args['eventType'] as int;
           _watchEventCallback!(
-            args['path'],
-            WatchEventType.fromValue(args['eventType']),
+            path,
+            WatchEventType.fromValue(eventType),
           );
         }
         break;
       case 'onPermissionResult':
         if (_permissionResultCallback != null) {
-          final bool granted = call.arguments['granted'];
+          final bool granted = call.arguments['granted'] as bool;
           _permissionResultCallback!(granted);
         }
         break;
@@ -102,11 +105,27 @@ class MethodChannelExternalStorage extends ExternalStoragePlatform {
 
   @override
   Future<FileInfo> getFileInfo(String path) async {
-    final Map<dynamic, dynamic> result = await methodChannel.invokeMethod(
-      'getFileInfo',
-      {'path': path},
-    );
-    return FileInfo.fromMap(Map<String, dynamic>.from(result));
+    try {
+      final Map<dynamic, dynamic> result = await methodChannel.invokeMethod(
+        'getFileInfo',
+        {'path': path},
+      );
+
+      if (!result.containsKey('info')) {
+        throw PlatformException(
+          code: 'ERROR',
+          message: 'Invalid response format',
+        );
+      }
+
+      final Map<dynamic, dynamic> info = result['info'];
+      return FileInfo.fromMap(Map<String, dynamic>.from(info));
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error in getFileInfo: $e');
+      }
+      rethrow;
+    }
   }
 
   @override
@@ -160,27 +179,37 @@ class MethodChannelExternalStorage extends ExternalStoragePlatform {
       });
 
       if (result == null || result['entries'] == null) {
-        print('Warning: Null result from listDirectory for path: $path');
+        if (kDebugMode) {
+          print('Warning: Null result from listDirectory for path: $path');
+        }
         return [];
       }
 
       final entries = result['entries'] as List?;
       if (entries == null) {
-        print('Warning: Null entries list for path: $path');
+        if (kDebugMode) {
+          print('Warning: Null entries list for path: $path');
+        }
         return [];
       }
 
       return entries
           .map((entry) {
             if (entry == null) {
-              print('Warning: Null entry in list for path: $path');
+              if (kDebugMode) {
+                print('Warning: Null entry in list for path: $path');
+              }
               return null;
             }
             try {
               return FileInfo.fromMap(Map<String, dynamic>.from(entry));
             } catch (e, s) {
-              print('Error converting entry to FileInfo: $e\n$s');
-              print('Problematic entry: $entry');
+              if (kDebugMode) {
+                print('Error converting entry to FileInfo: $e\n$s');
+              }
+              if (kDebugMode) {
+                print('Problematic entry: $entry');
+              }
               return null;
             }
           })
@@ -188,7 +217,9 @@ class MethodChannelExternalStorage extends ExternalStoragePlatform {
           .cast<FileInfo>()
           .toList();
     } catch (e, s) {
-      print('Error in listDirectory: $e\n$s');
+      if (kDebugMode) {
+        print('Error in listDirectory: $e\n$s');
+      }
       return [];
     }
   }
