@@ -210,7 +210,34 @@ final fullPath = PathUtils.join(['/storage/emulated/0', 'Download', 'test.txt'])
 ```
 
 ## Data Models
-...(keep original content)
+
+### StorageDevice
+Model for storage device information, including:
+- Device path
+- Device name
+- Removability
+- Total capacity
+- Available capacity
+- Read-only status
+
+### FileInfo
+Model for file information, including:
+- File name
+- File path
+- File size
+- Modification time
+- File type
+- Permission information
+
+### DirectoryInfo
+Model for directory information, including:
+- Directory name
+- Directory path
+- Parent directory
+- Space information
+- File count
+- Permission information
+
 
 ## Notes
 
