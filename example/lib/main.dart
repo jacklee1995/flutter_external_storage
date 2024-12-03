@@ -227,8 +227,7 @@ class StorageDemoState extends State<StorageDemo> {
 
       // 检查文件是否存在，如果存在则添加后缀
       while (await storage.fileExists(testPath)) {
-        testPath =
-            path.join(_currentPath, '${baseName}_$counter$extension'); // 修改这里
+        testPath = path.join(_currentPath, '${baseName}_$counter$extension');
         counter++;
       }
 
@@ -249,7 +248,7 @@ class StorageDemoState extends State<StorageDemo> {
 
       // 检查目录是否存在，如果存在则添加后缀
       while (await storage.directoryExists(dirPath)) {
-        dirPath = path.join(_currentPath, '${baseName}_$counter'); // 修改这里
+        dirPath = path.join(_currentPath, '${baseName}_$counter');
         counter++;
       }
 
@@ -608,7 +607,6 @@ class StorageDemoState extends State<StorageDemo> {
     }
   }
 
-// 3. 修改 _showErrorDialog 方法，添加 mounted 检查
   Future<void> _showErrorDialog(String message) async {
     if (!mounted) return;
     return showDialog(

@@ -1,8 +1,8 @@
 # external_storage
 
 - Author: Juncai Li (jcLee95)
-- ![jcLee95](https://raw.githubusercontent.com/jacklee1995/flutter_external_storage/refs/heads/master/jclee95_64x64.ico)
-- Email: [291148484@163.com](291148484@163.com)
+- [![jcLee95](https://raw.githubusercontent.com/jacklee1995/flutter_external_storage/refs/heads/master/jclee95_64x64.ico)
+- Email: [291148484@163.com](291148484@163.com)](https://jclee95.blog.csdn.net)
 - Description: A powerful Flutter Android external storage management plugin that provides complete file system operations, storage device management, file monitoring, and permission handling functionality.
 - License: [LICENSE](https://github.com/jacklee1995/flutter_external_storage/blob/master/LICENSE)
 - 中文：[./README_CN.md](https://github.com/jacklee1995/flutter_external_storage/blob/master/README_CN.md)
@@ -51,7 +51,7 @@ Add the following permissions to your `AndroidManifest.xml`:
         android:label="external_storage_example"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
-        <!-- File provider -->
+        <!-- File provider (If used) -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileProvider"
@@ -64,6 +64,8 @@ Add the following permissions to your `AndroidManifest.xml`:
     </application>
 </manifest>
 ```
+
+Refer to the example project given in detail.
 
 ## Usage Guide
 
