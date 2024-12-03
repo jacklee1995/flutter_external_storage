@@ -1,7 +1,7 @@
 # external_storage
 
 - Author: Juncai Li (jcLee95)
-- ![jcLee95](./jclee95_64x64.ico)
+- ![jcLee95](https://raw.githubusercontent.com/jacklee1995/flutter_external_storage/refs/heads/master/jclee95_64x64.ico)
 - Email: [291148484@163.com](291148484@163.com)
 - Description: A powerful Flutter Android external storage management plugin that provides complete file system operations, storage device management, file monitoring, and permission handling functionality.
 - License: [LICENSE](https://github.com/jacklee1995/flutter_external_storage/blob/master/LICENSE)
