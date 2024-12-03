@@ -4,7 +4,7 @@
 - Email: [291148484@163.com](291148484@163.com)
 - Description: A powerful Flutter Android external storage management plugin that provides complete file system operations, storage device management, file monitoring, and permission handling functionality.
 - License: [LICENSE](./LICENSE)
-- 中文：[./README_CN.md]
+- 中文：[./README_CN.md](https://github.com/jacklee1995/flutter_external_storage/blob/master/README_CN.md)
 
 ## Features
 
