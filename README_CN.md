@@ -1,7 +1,5 @@
 # external_storage
 
-
-
 - 作者：李俊才（jcLee95）
 - ![jcLee95](./jclee95_64x64.ico)
 - 邮箱：[291148484@163.com](291148484@163.com)

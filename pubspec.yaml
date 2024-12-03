@@ -1,5 +1,5 @@
 name: external_storage
-description: "A new Flutter plugin project."
+description: "A powerful Flutter Android external storage management plugin that provides complete file system operations, storage device management, file monitoring, and permission handling functionality."
 version: 0.0.1
 homepage:
 
@@ -19,7 +19,6 @@ dev_dependencies:
   flutter_lints: ^4.0.0
 
 flutter:
-
   plugin:
     platforms:
       android:
