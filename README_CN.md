@@ -1,7 +1,7 @@
 # external_storage
 
 - 作者：李俊才（jcLee95）
-- ![jcLee95](https://raw.githubusercontent.com/jacklee1995/flutter_external_storage/refs/heads/master/jclee95_64x64.ico)
+- [![jcLee95](https://raw.githubusercontent.com/jacklee1995/flutter_external_storage/refs/heads/master/jclee95_64x64.ico)](https://jclee95.blog.csdn.net)
 - 邮箱：[291148484@163.com](291148484@163.com)
 - 描述：一个功能强大的 Flutter 安卓外部存储管理插件，提供完整的文件系统操作、存储设备管理、文件监视和权限处理功能。
 - 协议：[LICENSE](https://github.com/jacklee1995/flutter_external_storage/blob/master/LICENSE)
@@ -51,7 +51,7 @@ dependencies:
         android:label="external_storage_example"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
-        <!-- 文件提供者 -->
+        <!-- 文件提供者（非必须） -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileProvider"
@@ -65,6 +65,7 @@ dependencies:
 </manifest>
 ```
 
+详细参考给出的示例项目。
 
 ## 使用指南
 
