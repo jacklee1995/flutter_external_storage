@@ -1,5 +1,7 @@
 # external_storage
 
+![alt text](flutter_external_storage.png)
+
 - Author: Juncai Li (jcLee95)
 - [![jcLee95](https://raw.githubusercontent.com/jacklee1995/flutter_external_storage/refs/heads/master/jclee95_64x64.ico)
 - Email: [291148484@163.com](291148484@163.com)](https://jclee95.blog.csdn.net)
