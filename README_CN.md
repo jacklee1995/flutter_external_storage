@@ -1,5 +1,7 @@
 # external_storage
 
+![alt text](https://raw.githubusercontent.com/jacklee1995/flutter_external_storage/refs/heads/master/flutter_external_storage.png)
+
 - 作者：李俊才（jcLee95）
 - [![jcLee95](https://raw.githubusercontent.com/jacklee1995/flutter_external_storage/refs/heads/master/jclee95_64x64.ico)](https://jclee95.blog.csdn.net)
 - 邮箱：[291148484@163.com](291148484@163.com)

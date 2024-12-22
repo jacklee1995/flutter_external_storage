@@ -1,15 +1,19 @@
 # external_storage
 
-![alt text](flutter_external_storage.png)
+![alt text](https://raw.githubusercontent.com/jacklee1995/flutter_external_storage/refs/heads/master/flutter_external_storage.png)
 
-- Author: Juncai Li (jcLee95)
-- [![jcLee95](https://raw.githubusercontent.com/jacklee1995/flutter_external_storage/refs/heads/master/jclee95_64x64.ico)
-- Email: [291148484@163.com](291148484@163.com)](https://jclee95.blog.csdn.net)
-- Description: A powerful Flutter Android external storage management plugin that provides complete file system operations, storage device management, file monitoring, and permission handling functionality.
+- Author: Li Juncai (jcLee95)
+- [![jcLee95](https://raw.githubusercontent.com/jacklee1995/flutter_external_storage/refs/heads/master/jclee95_64x64.ico)](https://jclee95.blog.csdn.net)
+- Email: [291148484@163.com](291148484@163.com)
+- Description: A powerful Flutter Android external storage management plugin that provides comprehensive file system operations, storage device management, file monitoring, and permission handling.
 - License: [LICENSE](https://github.com/jacklee1995/flutter_external_storage/blob/master/LICENSE)
-- 中文：[./README_CN.md](https://github.com/jacklee1995/flutter_external_storage/blob/master/README_CN.md)
+- 中文版：[README_CN.md](https://github.com/jacklee1995/flutter_external_storage/blob/master/README_CN.md)
 
-## Features
+## Introduction
+
+External Storage is a powerful and easy-to-use Flutter plugin designed for cross-platform file and storage management. The library provides a comprehensive set of APIs for handling file and directory operations on external storage devices, supporting various file system interaction scenarios.
+
+### Feature Highlights
 
 - 📱 Multi-storage device management
 - 📂 Complete file and directory operations
@@ -19,13 +23,35 @@
 - ⚡ High-performance file operations
 - 🎯 Type-safe API
 
+### Key Features
+
+The External Storage plugin offers rich file and storage management capabilities, including but not limited to:
+
+File Operations: Reading, writing, copying, moving, and deleting files
+Directory Management: Creating, listing, copying, and monitoring directories
+Storage Device Information: Retrieving detailed storage device information
+File System Monitoring: Real-time listening to file and directory changes
+Permission Management: Simplifying storage permission application and management
+
 ## Installation
 
-Add this dependency to your `pubspec.yaml` file:
+Add the following dependency to your `pubspec.yaml` file:
 
 ```yaml
 dependencies:
   external_storage: ^latest_version
+```
+
+Then execute the Flutter package retrieval command:
+
+```bash
+flutter pub get
+```
+
+Or directly install the latest version using the add command:
+
+```sh
+flutter pub add external_storage
 ```
 
 ## Configuration
@@ -34,26 +60,26 @@ Add the following permissions to your `AndroidManifest.xml`:
 
 ```xml
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Android 13+ (API 33+) Granular storage permissions -->
+    <!-- Android 13+ (API 33+) Granular Storage Permissions -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
     
-    <!-- Android 14+ (API 34+) Photo and video access permissions -->
+    <!-- Android 14+ (API 34+) Photo and Video Access Permissions -->
     <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
 
-    <!-- Storage permissions for Android 10 and below -->
+    <!-- Storage Permissions for Android 10 and below -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
 
-    <!-- All files access permission (requires manual grant in system settings) -->
+    <!-- All File Access Permission (Requires manual user authorization in system settings) -->
     <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
 
     <application
         android:label="external_storage_example"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
-        <!-- File provider (If used) -->
+        <!-- File Provider (Optional) -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileProvider"
@@ -67,201 +93,151 @@ Add the following permissions to your `AndroidManifest.xml`:
 </manifest>
 ```
 
-Refer to the example project given in detail.
+Refer to the provided example project for detailed information.
 
-## Usage Guide
+## Basic Usage
 
-### Storage Device Management
+### Initialization
 
 ```dart
-// Get all storage devices
-final devices = await storage.getAllStorageDevices();
-for (var device in devices) {
-  print('Device name: ${device.name}');
-  print('Total space: ${device.totalSize}');
-  print('Available space: ${device.availableSize}');
-  print('Usage: ${device.usagePercentage}%');
+import 'package:external_storage/external_storage.dart';
+
+final externalStorage = ExternalStorage();
+```
+
+### Storage Device Information
+
+Retrieve all available storage devices:
+
+```dart
+Future<void> getStorageDevices() async {
+  try {
+    List<StorageDevice> devices = await externalStorage.getAllStorageDevices();
+    devices.forEach((device) {
+      print('Device Path: ${device.path}');
+      print('Device Name: ${device.name}');
+      print('Total Space: ${device.totalSize} bytes');
+      print('Available Space: ${device.availableSize} bytes');
+    });
+  } catch (e) {
+    print('Failed to get storage devices: $e');
+  }
 }
 ```
 
 ### File Operations
 
+#### Reading a File
+
 ```dart
-// Read file
-final bytes = await storage.readFile('/storage/emulated/0/test.txt');
-final content = String.fromCharCodes(bytes);
+Future<void> readFileContent() async {
+  try {
+    Uint8List fileData = await externalStorage.readFile('/path/to/file');
+    print('File Content: $fileData');
+  } catch (e) {
+    print('Failed to read file: $e');
+  }
+}
+```
 
-// Write file
-final data = Uint8List.fromList('Hello World'.codeUnits);
-final bytesWritten = await storage.writeFile('/storage/emulated/0/test.txt', data);
+#### Writing to a File
 
-// Copy file
-await storage.copyFile(
-  '/storage/emulated/0/source.txt',
-  '/storage/emulated/0/backup/source.txt'
-);
-
-// Get file info
-final info = await storage.getFileInfo('/storage/emulated/0/test.txt');
-print('File name: ${info.name}');
-print('Size: ${info.size}');
-print('Last modified: ${info.lastModified}');
+```dart
+Future<void> writeFileContent() async {
+  try {
+    Uint8List data = Uint8List.fromList('Hello, External Storage!'.codeUnits);
+    int bytesWritten = await externalStorage.writeFile('/path/to/file', data);
+    print('Wrote $bytesWritten bytes');
+  } catch (e) {
+    print('Failed to write file: $e');
+  }
+}
 ```
 
 ### Directory Operations
 
-```dart
-// Create directory
-await storage.createDirectory('/storage/emulated/0/MyApp', recursive: true);
+#### Listing Directory Contents
 
-// List directory contents
-final entries = await storage.listDirectory('/storage/emulated/0/Download');
-for (var entry in entries) {
-  if (entry.isFile) {
-    print('File: ${entry.name}');
-  } else {
-    print('Directory: ${entry.name}');
+```dart
+Future<void> listDirectoryContents() async {
+  try {
+    List<FileInfo> files = await externalStorage.listDirectory('/path/to/directory');
+    files.forEach((file) {
+      print('File Name: ${file.name}');
+      print('File Path: ${file.path}');
+      print('File Size: ${file.size} bytes');
+    });
+  } catch (e) {
+    print('Failed to list directory contents: $e');
   }
 }
-
-// Get directory info
-final dirInfo = await storage.getDirectoryInfo('/storage/emulated/0/Pictures');
-print('File count: ${dirInfo.fileCount}');
-print('Directory count: ${dirInfo.directoryCount}');
-print('Total space: ${dirInfo.totalSpace}');
 ```
 
-### File Monitoring
+### File System Monitoring
+
+#### Listening to File System Events
 
 ```dart
-// Set up monitor
-storage.registerWatchEventCallback((path, event) {
-  switch (event) {
-    case WatchEventType.create:
-      print('Created: $path');
-      break;
-    case WatchEventType.modify:
-      print('Modified: $path');
-      break;
-    case WatchEventType.delete:
-      print('Deleted: $path');
-      break;
+Future<void> watchDirectory() async {
+  try {
+    await externalStorage.startWatching(
+      '/path/to/watch',
+      recursive: true,
+      events: [
+        WatchEventType.create,
+        WatchEventType.delete,
+        WatchEventType.modify
+      ],
+    );
+
+    externalStorage.registerWatchEventCallback((path, event) {
+      print('File System Event: $path, Event Type: ${event.name}');
+    });
+  } catch (e) {
+    print('Failed to watch directory: $e');
   }
-});
-
-// Start watching directory
-await storage.startWatching(
-  '/storage/emulated/0/Download',
-  recursive: true,
-  events: [
-    WatchEventType.create,
-    WatchEventType.modify,
-    WatchEventType.delete,
-  ],
-);
-
-// Get all watched paths
-final watchedPaths = await storage.getWatchedPaths();
-print('Watching paths: $watchedPaths');
-
-// Stop watching specific directory
-await storage.stopWatching('/storage/emulated/0/Download');
+}
 ```
 
 ### Permission Management
 
+#### Checking and Requesting Storage Permissions
+
 ```dart
-// Permission check and request
-if (!await storage.checkStoragePermissions()) {
-  final granted = await storage.requestStoragePermissions();
-  if (!granted) {
-    if (await storage.shouldShowRequestPermissionRationale()) {
-      // Show permission explanation
-      showPermissionDialog();
-    } else {
-      // Guide user to settings page
-      await storage.openAppSettings();
+Future<void> manageStoragePermissions() async {
+  try {
+    bool hasPermission = await externalStorage.checkStoragePermissions();
+    if (!hasPermission) {
+      bool permissionGranted = await externalStorage.requestStoragePermissions();
+      if (permissionGranted) {
+        print('Storage permission granted');
+      } else {
+        print('Storage permission denied');
+      }
     }
+  } catch (e) {
+    print('Permission management failed: $e');
   }
 }
-
-// Check specific permission
-final hasImagePermission = await storage.checkPermission(
-  'android.permission.READ_MEDIA_IMAGES'
-);
-
-// Get granted permissions list
-final grantedPermissions = await storage.getGrantedPermissions();
-print('Granted permissions: $grantedPermissions');
 ```
 
-### Utility Methods
+## Advanced Features
 
-```dart
-import 'package:external_storage/src/utils/path_utils.dart';
+External Storage provides additional advanced features such as file MD5 calculation, MIME type retrieval, file attribute checking, etc. It is recommended to consult the API documentation for more detailed information.
 
-// Path processing
-final normalizedPath = PathUtils.normalize('/storage/emulated/0/./test/../docs');
-final fileName = PathUtils.basename('/storage/emulated/0/test.txt');
-final extension = PathUtils.extension('/storage/emulated/0/test.txt');
+## Precautions
 
-// Path checking
-final isHidden = PathUtils.isHidden('.hidden_file');
-final readableSize = PathUtils.getReadableSize(1024 * 1024); // "1.00 MB"
+When using External Storage, please note:
 
-// Path combination
-final fullPath = PathUtils.join(['/storage/emulated/0', 'Download', 'test.txt']);
-```
-
-## Data Models
-
-### StorageDevice
-Model for storage device information, including:
-- Device path
-- Device name
-- Removability
-- Total capacity
-- Available capacity
-- Read-only status
-
-### FileInfo
-Model for file information, including:
-- File name
-- File path
-- File size
-- Modification time
-- File type
-- Permission information
-
-### DirectoryInfo
-Model for directory information, including:
-- Directory name
-- Directory path
-- Parent directory
-- Space information
-- File count
-- Permission information
-
-
-## Notes
-
-1. Android 10 (API 29) and above need to adapt to scoped storage
-2. Some operations may require special permissions:
-   - `MANAGE_EXTERNAL_STORAGE` for complete file access
-   - `READ_MEDIA_*` permissions for media file access
-3. File monitoring features consume system resources, recommendations:
-   - Limit the number of monitored directories
-   - Stop monitoring when not in use
-   - Avoid monitoring system directories
-4. Large file operation recommendations:
-   - Use asynchronous methods
-   - Implement progress callbacks
-   - Consider chunked processing
-5. Permission handling recommendations:
-   - Check permissions before use
-   - Provide clear permission explanations
-   - Implement graceful degradation strategies
+Ensure handling of potential exception scenarios
+Follow best practices when using file and directory operations
+Pay attention to cross-platform compatibility
+Additional permission configurations may be required on some platforms
 
 ## License
 
-This project is open-sourced under the MIT License.
+This plugin follows the MIT License. Please refer to the project license file for detailed information.
+
+## Contribution
+
+Welcome to submit issues and pull requests through the GitHub repository to collectively improve the External Storage plugin.
