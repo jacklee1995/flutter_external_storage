@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:external_storage/external_storage.dart';
@@ -12,6 +14,9 @@ void main() {
   late MockExternalStorage mockStorage;
   final testTime = DateTime(2024, 12, 1, 21, 4, 22);
 
+  /// 每次 watch 调用返回一个独立的流，用来检查哪些目录正在被监视。
+  late Map<String, StreamController<WatchEvent>> watchControllers;
+
   Widget createTestApp(MockExternalStorage storage) {
     return MaterialApp(
       home: StorageDemo(storage: storage),
@@ -22,11 +27,17 @@ void main() {
     mockStorage = MockExternalStorage();
 
     // 基础操作模拟
-    when(mockStorage.stopAllWatching()).thenAnswer((_) async => true);
     when(mockStorage.fileExists(any)).thenAnswer((_) async => false);
     when(mockStorage.directoryExists(any)).thenAnswer((_) async => false);
-    when(mockStorage.startWatching(any)).thenAnswer((_) async => true);
-    when(mockStorage.stopWatching(any)).thenAnswer((_) async => true);
+    watchControllers = {};
+    when(mockStorage.watch(any,
+            recursive: anyNamed('recursive'), events: anyNamed('events')))
+        .thenAnswer((invocation) {
+      final controller = StreamController<WatchEvent>();
+      watchControllers[invocation.positionalArguments.first as String] =
+          controller;
+      return controller.stream;
+    });
 
     // 权限检查模拟
     when(mockStorage.checkStoragePermissions()).thenAnswer((_) async => true);
@@ -89,8 +100,8 @@ void main() {
       expect(find.text('External Storage Demo'), findsOneWidget);
       expect(find.byIcon(Icons.refresh), findsOneWidget);
       expect(find.byIcon(Icons.home), findsOneWidget);
-      expect(find.byIcon(Icons.note_add), findsOneWidget);
-      expect(find.byIcon(Icons.create_new_folder), findsOneWidget);
+      // 创建按钮只在进入目录后显示
+      expect(find.byIcon(Icons.note_add), findsNothing);
 
       // 验证存储设备列表
       expect(find.text('Internal Storage'), findsOneWidget);
@@ -108,7 +119,9 @@ void main() {
       // 验证文件列表
       expect(find.text('test.txt'), findsOneWidget);
       expect(find.text('test_dir'), findsOneWidget);
-      expect(find.textContaining('/storage/emulated/0'), findsOneWidget);
+      expect(find.text('当前路径: /storage/emulated/0'), findsOneWidget);
+      expect(find.byIcon(Icons.note_add), findsOneWidget);
+      expect(find.byIcon(Icons.create_new_folder), findsOneWidget);
     });
 
     testWidgets('Permission Status Display Test', (WidgetTester tester) async {
@@ -238,12 +251,15 @@ void main() {
     testWidgets('Permission Denied Test', (WidgetTester tester) async {
       when(mockStorage.checkStoragePermissions())
           .thenAnswer((_) async => false);
+      when(mockStorage.requestStoragePermissions())
+          .thenAnswer((_) async => false);
 
       await tester.pumpWidget(createTestApp(mockStorage));
       await tester.pumpAndSettle();
 
       expect(find.text('需要存储权限才能使用此应用'), findsOneWidget);
       expect(find.byType(FloatingActionButton), findsNothing);
+      verify(mockStorage.requestStoragePermissions()).called(1);
     });
   });
 
@@ -346,10 +362,37 @@ void main() {
       await tester.tap(find.text('test_dir'));
       await tester.pumpAndSettle();
 
-      await tester.pageBack();
+      expect(watchControllers['/storage/emulated/0/test_dir']!.hasListener,
+          isTrue);
+
+      // 页面没有 AppBar 返回按钮，模拟系统返回键
+      await tester.binding.handlePopRoute();
       await tester.pumpAndSettle();
 
-      verify(mockStorage.stopWatching(any)).called(1);
+      // 离开子目录即取消订阅（停止监视），回到上级目录重新监视
+      expect(watchControllers['/storage/emulated/0/test_dir']!.hasListener,
+          isFalse);
+      expect(watchControllers['/storage/emulated/0']!.hasListener, isTrue);
+    });
+
+    testWidgets('File system events refresh the listing',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(createTestApp(mockStorage));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Internal Storage'));
+      await tester.pumpAndSettle();
+      verify(mockStorage.listDirectory('/storage/emulated/0')).called(1);
+
+      watchControllers['/storage/emulated/0']!.add(const WatchEvent(
+        type: WatchEventType.create,
+        path: '/storage/emulated/0/new.txt',
+        watchedPath: '/storage/emulated/0',
+      ));
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pumpAndSettle();
+
+      verify(mockStorage.listDirectory('/storage/emulated/0')).called(1);
     });
 
     testWidgets('Home Navigation Test', (WidgetTester tester) async {
@@ -364,6 +407,7 @@ void main() {
 
       expect(find.text('Internal Storage'), findsOneWidget);
       expect(find.text('SD Card'), findsOneWidget);
+      expect(watchControllers['/storage/emulated/0']!.hasListener, isFalse);
     });
   });
 }

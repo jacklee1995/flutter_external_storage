@@ -3,7 +3,7 @@ description: "Demonstrates how to use the external_storage plugin."
 publish_to: 'none'
 
 environment:
-  sdk: ^3.5.4
+  sdk: ^3.8.0
 
 dependencies:
   flutter:
@@ -13,9 +13,6 @@ dependencies:
     path: ../
 
   path: ^1.9.0
-  mockito: ^5.4.4
-  permission_handler: ^11.3.1
-  device_info_plus: ^11.1.1
   open_file: ^3.5.10
   mime: ^2.0.0
 
@@ -25,7 +22,8 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
 
-  flutter_lints: ^4.0.0
+  flutter_lints: ^6.0.0
+  mockito: ^5.4.4
   build_runner: ^2.4.13
 
 flutter:

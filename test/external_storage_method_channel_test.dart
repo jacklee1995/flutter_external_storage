@@ -2,222 +2,136 @@ import 'package:external_storage/external_storage.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+/// 通过方法通道调用原生端的部分：存储卷、权限（Android）。
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-
-  final MethodChannelExternalStorage platform = MethodChannelExternalStorage();
-  final List<MethodCall> log = <MethodCall>[];
-  DateTime testTime = DateTime(2024);
+  const channel = MethodChannel('tech.thispage.external_storage');
+  final messenger =
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+  final log = <MethodCall>[];
 
   setUp(() {
-    // 设置测试通道处理器
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(
-      const MethodChannel('tech.thispage.external_storage'),
-      (MethodCall methodCall) async {
-        log.add(methodCall);
-        switch (methodCall.method) {
-          case 'getAllStorageDevices':
-            return [
-              {
-                'path': '/storage/emulated/0',
-                'name': '内部存储',
-                'isRemovable': false,
-                'totalSize': 1024 * 1024 * 1024,
-                'availableSize': 512 * 1024 * 1024,
-                'isReadOnly': false,
-              }
-            ];
-
-          case 'readFile':
-            return {
-              'success': true,
-              'data': Uint8List.fromList([1, 2, 3, 4]),
-              'bytesRead': 4
-            };
-
-          case 'writeFile':
-            return {'success': true, 'bytesWritten': 4};
-
-          case 'getFileInfo':
-            return {
-              'success': true,
-              'info': {
-                'name': 'test.txt',
-                'path': '/storage/emulated/0/test.txt',
-                'size': 1024,
-                'lastModified': testTime.millisecondsSinceEpoch,
-                'isDirectory': false,
-                'isFile': true,
-                'canRead': true,
-                'canWrite': true,
-                'canExecute': false,
-                'isHidden': false,
-              }
-            };
-
-          case 'getDirectoryInfo':
-            return {
-              'success': true,
-              'name': 'test_dir',
-              'path': '/storage/emulated/0/test_dir',
-              'parent': '/storage/emulated/0',
-              'lastModified': testTime.toIso8601String(),
-              'canRead': true,
-              'canWrite': true,
-              'canExecute': true,
-              'isHidden': false,
-              'totalSpace': 1024 * 1024,
-              'freeSpace': 512 * 1024,
-              'usableSpace': 512 * 1024,
-              'fileCount': 5,
-              'directoryCount': 2,
-            };
-
-          case 'listDirectory':
-            return {
-              'success': true,
-              'entries': [
-                {
-                  'name': 'test.txt',
-                  'path': '/storage/emulated/0/test.txt',
-                  'size': 1024,
-                  'lastModified': testTime.millisecondsSinceEpoch,
-                  'isDirectory': false,
-                  'isFile': true,
-                  'canRead': true,
-                  'canWrite': true,
-                  'canExecute': false,
-                  'isHidden': false,
-                }
-              ]
-            };
-
-          default:
-            return {'success': true};
-        }
-      },
-    );
+    messenger.setMockMethodCallHandler(channel, (MethodCall call) async {
+      log.add(call);
+      switch (call.method) {
+        case 'getAllStorageDevices':
+          return [
+            {
+              'path': '/storage/emulated/0',
+              'name': '内部共享存储空间',
+              'isPrimary': true,
+              'isRemovable': false,
+              'totalSize': 1024 * 1024 * 1024,
+              'availableSize': 512 * 1024 * 1024,
+              'isReadOnly': false,
+              'description': '内部共享存储空间',
+            },
+            {
+              'path': '/storage/1A2B-3C4D',
+              'name': 'SanDisk SD card',
+              'isRemovable': true,
+              'totalSize': 2048,
+              'availableSize': 1024,
+              'isReadOnly': false,
+              'uuid': '1A2B-3C4D',
+              'description': 'SanDisk SD card',
+            },
+          ];
+        case 'checkStoragePermissions':
+        case 'checkPermission':
+          return {'hasPermission': true};
+        case 'requestStoragePermissions':
+          return {'success': false};
+        case 'shouldShowRequestPermissionRationale':
+          return {'shouldShow': true};
+        case 'getGrantedPermissions':
+          return {
+            'permissions': ['android.permission.MANAGE_EXTERNAL_STORAGE']
+          };
+        default:
+          return {'success': true};
+      }
+    });
   });
 
   tearDown(() {
     log.clear();
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(
-            const MethodChannel('tech.thispage.external_storage'), null);
+    messenger.setMockMethodCallHandler(channel, null);
   });
 
-  test('getAllStorageDevices', () async {
-    final devices = await platform.getAllStorageDevices();
-    expect(devices, isA<List<StorageDevice>>());
-    expect(devices.length, 1);
-    expect(devices[0].name, '内部存储');
-    expect(log, <Matcher>[
-      isMethodCall('getAllStorageDevices', arguments: null),
-    ]);
+  test('getAllStorageDevices parses volumes', () async {
+    final devices =
+        await MethodChannelExternalStorage(isAndroid: true).getAllStorageDevices();
+    expect(devices, hasLength(2));
+    expect(devices[0].isPrimary, isTrue);
+    expect(devices[0].uuid, isNull);
+    expect(devices[1].isPrimary, isFalse);
+    expect(devices[1].uuid, '1A2B-3C4D');
+    expect(devices[1].description, 'SanDisk SD card');
+    expect(log.single, isMethodCall('getAllStorageDevices', arguments: null));
   });
 
-  test('readFile', () async {
-    final data = await platform.readFile('/test.txt');
-    expect(data, isA<Uint8List>());
-    expect(data.length, 4);
-    expect(log, <Matcher>[
-      isMethodCall('readFile',
-          arguments: {'path': '/test.txt', 'offset': 0, 'length': -1}),
-    ]);
-  });
+  group('Android permissions use the native side', () {
+    late MethodChannelExternalStorage platform;
+    setUp(() => platform = MethodChannelExternalStorage(isAndroid: true));
 
-  test('writeFile', () async {
-    final bytesWritten =
-        await platform.writeFile('/test.txt', Uint8List.fromList([1, 2, 3, 4]));
-    expect(bytesWritten, 4);
-    expect(log, <Matcher>[
-      isMethodCall('writeFile', arguments: {
-        'path': '/test.txt',
-        'data': [1, 2, 3, 4],
-        'append': false
-      }),
-    ]);
-  });
-
-  test('getFileInfo', () async {
-    final info = await platform.getFileInfo('/test.txt');
-    expect(info, isA<FileInfo>());
-    expect(info.name, 'test.txt');
-    expect(log, <Matcher>[
-      isMethodCall('getFileInfo', arguments: {'path': '/test.txt'}),
-    ]);
-  });
-
-  test('getDirectoryInfo', () async {
-    final info = await platform.getDirectoryInfo('/test_dir');
-    expect(info, isA<DirectoryInfo>());
-    expect(info.name, 'test_dir');
-    expect(info.fileCount, 5);
-    expect(info.directoryCount, 2);
-    expect(log, <Matcher>[
-      isMethodCall('getDirectoryInfo', arguments: {'path': '/test_dir'}),
-    ]);
-  });
-
-  test('listDirectory', () async {
-    final entries = await platform.listDirectory('/test_dir');
-    expect(entries, isA<List<FileInfo>>());
-    expect(entries.length, 1);
-    expect(entries[0].name, 'test.txt');
-    expect(log, <Matcher>[
-      isMethodCall('listDirectory',
-          arguments: {'path': '/test_dir', 'recursive': false}),
-    ]);
-  });
-
-  test('startWatching', () async {
-    final success = await platform.startWatching('/test_dir',
-        recursive: true,
-        events: [WatchEventType.create, WatchEventType.delete]);
-    expect(success, isTrue);
-    expect(log, <Matcher>[
-      isMethodCall('startWatching', arguments: {
-        'path': '/test_dir',
-        'recursive': true,
-        'eventMask': WatchEventType.create.value | WatchEventType.delete.value,
-      }),
-    ]);
-  });
-
-  test('stopWatching', () async {
-    final success = await platform.stopWatching('/test_dir');
-    expect(success, isTrue);
-    expect(log, <Matcher>[
-      isMethodCall('stopWatching', arguments: {'path': '/test_dir'}),
-    ]);
-  });
-
-  test('watchEventCallback', () async {
-    String? receivedPath;
-    WatchEventType? receivedEvent;
-
-    platform.registerWatchEventCallback((path, event) {
-      receivedPath = path;
-      receivedEvent = event;
+    test('checkStoragePermissions', () async {
+      expect(await platform.checkStoragePermissions(), isTrue);
+      expect(log.single, isMethodCall('checkStoragePermissions', arguments: null));
     });
 
-    await TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .handlePlatformMessage(
-      'tech.thispage.external_storage',
-      const StandardMethodCodec().encodeMethodCall(
-        const MethodCall(
-          'onFileSystemEvent',
-          {
-            'path': '/test_dir/new_file.txt',
-            'eventType': 256,
-          },
-        ),
-      ),
-      (ByteData? data) {},
-    );
+    test('requestStoragePermissions reports the result to the callback',
+        () async {
+      bool? reported;
+      platform.registerPermissionResultCallback((granted) => reported = granted);
+      expect(await platform.requestStoragePermissions(), isFalse);
+      expect(reported, isFalse);
+      expect(log.single,
+          isMethodCall('requestStoragePermissions', arguments: null));
+    });
 
-    expect(receivedPath, '/test_dir/new_file.txt');
-    expect(receivedEvent, WatchEventType.create);
+    test('rationale, specific and granted permissions', () async {
+      expect(await platform.shouldShowRequestPermissionRationale(), isTrue);
+      expect(await platform.checkPermission('android.permission.X'), isTrue);
+      expect(log.last,
+          isMethodCall('checkPermission', arguments: {'permission': 'android.permission.X'}));
+      expect(await platform.getGrantedPermissions(),
+          ['android.permission.MANAGE_EXTERNAL_STORAGE']);
+      expect(await platform.openAppSettings(), isTrue);
+    });
+
+    test('native errors propagate as PlatformException', () async {
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        throw PlatformException(code: 'PERMISSION_NOT_DECLARED');
+      });
+      await expectLater(
+        platform.requestStoragePermissions(),
+        throwsA(isA<PlatformException>()
+            .having((e) => e.code, 'code', 'PERMISSION_NOT_DECLARED')),
+      );
+    });
+  });
+
+  group('iOS has no storage permission', () {
+    late MethodChannelExternalStorage platform;
+    setUp(() => platform = MethodChannelExternalStorage(isAndroid: false));
+
+    test('permission checks succeed without calling the native side', () async {
+      bool? reported;
+      platform.registerPermissionResultCallback((granted) => reported = granted);
+
+      expect(await platform.checkStoragePermissions(), isTrue);
+      expect(await platform.requestStoragePermissions(), isTrue);
+      expect(reported, isTrue);
+      expect(await platform.shouldShowRequestPermissionRationale(), isFalse);
+      expect(await platform.checkPermission('android.permission.CAMERA'), isFalse);
+      expect(await platform.getGrantedPermissions(), isEmpty);
+      expect(log, isEmpty);
+    });
+
+    test('openAppSettings still opens the native settings page', () async {
+      expect(await platform.openAppSettings(), isTrue);
+      expect(log.single, isMethodCall('openAppSettings', arguments: null));
+    });
   });
 }

@@ -1,4 +1,9 @@
 /// 文件访问模式枚举
+///
+/// 插件的 API 没有用到它，而且与 `dart:io` 的 `FileMode` 同名，
+/// 同时导入两者时会产生名称冲突，后续版本将移除。
+@Deprecated('Unused by the plugin API and clashes with dart:io FileMode. '
+    'Will be removed in a future release.')
 enum FileMode {
   /// 只读模式
   ///

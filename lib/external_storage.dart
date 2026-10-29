@@ -1,4 +1,4 @@
-library external_storage;
+library;
 
 export './src/utils/path_utils.dart';
 

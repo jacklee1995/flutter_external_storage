@@ -4,9 +4,12 @@ import 'external_storage_method_channel.dart';
 import 'models/storage_device.dart';
 import 'models/file_info.dart';
 import 'models/directory_info.dart';
+import 'models/watch_event.dart';
 import 'enums/watch_event_type.dart';
 
 /// 外部存储插件的平台接口
+///
+/// 测试时可以继承本类（混入 `MockPlatformInterfaceMixin`）并赋值给 [instance]。
 abstract class ExternalStoragePlatform extends PlatformInterface {
   ExternalStoragePlatform() : super(token: _token);
 
@@ -109,6 +112,14 @@ abstract class ExternalStoragePlatform extends PlatformInterface {
   }
 
   /// 文件系统监视相关方法
+  Stream<WatchEvent> watch(
+    String path, {
+    bool recursive = false,
+    List<WatchEventType> events = const [],
+  }) {
+    throw UnimplementedError('watch() has not been implemented.');
+  }
+
   Future<bool> startWatching(
     String path, {
     bool recursive = false,

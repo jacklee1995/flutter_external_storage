@@ -65,16 +65,16 @@ class PathUtils {
     return p.split(path);
   }
 
-  /// 检查路径是否存在
+  /// 检查路径是否存在（文件、目录或有效的链接）
   static Future<bool> exists(String path) async {
-    final entity = io.File(path);
-    return await entity.exists();
+    return await io.FileSystemEntity.type(path) !=
+        io.FileSystemEntityType.notFound;
   }
 
-  /// 同步检查路径是否存在
+  /// 同步检查路径是否存在（文件、目录或有效的链接）
   static bool existsSync(String path) {
-    final entity = io.File(path);
-    return entity.existsSync();
+    return io.FileSystemEntity.typeSync(path) !=
+        io.FileSystemEntityType.notFound;
   }
 
   /// 检查路径是否为文件
@@ -123,41 +123,31 @@ class PathUtils {
   /// 获取当前工作目录
   static String get currentDir => io.Directory.current.path;
 
-  /// 检查路径是否包含非法字符
-  static bool hasIllegalChars(String path) {
-    // Windows 文件系统非法字符
-    final windowsIllegalChars = RegExp(r'[<>:"/\\|?*]');
-    // Unix 文件系统非法字符
-    final unixIllegalChars = RegExp(r'/\0/');
+  // FAT32 / exFAT（SD 卡、U 盘常用）和 Windows 不允许出现在文件名中的字符。
+  static final _illegalNameChars = RegExp(r'[<>:"/\\|?*\x00-\x1F]');
 
-    return windowsIllegalChars.hasMatch(path) ||
-        unixIllegalChars.hasMatch(path);
+  /// 检查路径的各级名称是否包含非法字符
+  ///
+  /// 路径分隔符和 Windows 盘符（如 `C:`）不算非法字符；名称中的 `<>:"\|?*`
+  /// 和控制字符在 FAT32 / exFAT 存储卷上无法使用。
+  static bool hasIllegalChars(String path) {
+    final root = p.rootPrefix(path);
+    final rest = path.substring(root.length);
+    if (rest.isEmpty) return false;
+    return p.split(rest).any(_illegalNameChars.hasMatch);
   }
 
   /// 获取合法的文件名
   ///
-  /// 移除文件名中的非法字符
+  /// 把文件名中的非法字符（含路径分隔符和控制字符）替换为 `_`
   static String sanitizeFilename(String filename) {
-    // 替换 Windows 和 Unix 的非法字符
-    return filename.replaceAll(RegExp(r'[<>:"/\\|?*\0]'), '_');
+    return filename.replaceAll(_illegalNameChars, '_');
   }
 
-  /// 检查路径是否为隐藏文件
+  /// 检查路径是否为隐藏文件（名称以 `.` 开头，`.` 和 `..` 除外）
   static bool isHidden(String path) {
     final basename = p.basename(path);
-    // Unix 风格的隐藏文件以 . 开头
-    if (basename.startsWith('.')) return true;
-    // Windows 隐藏文件属性需要通过系统 API 检查
-    if (io.Platform.isWindows) {
-      try {
-        final file = io.File(path);
-        // 此处可以添加 Windows 特定的隐藏文件检查逻辑
-        return file.existsSync() && basename.startsWith('.');
-      } catch (_) {
-        return false;
-      }
-    }
-    return false;
+    return basename.startsWith('.') && basename != '.' && basename != '..';
   }
 
   /// 获取文件大小的可读字符串表示
@@ -185,8 +175,8 @@ class PathUtils {
         return true;
       } else if (await isDirectory(path)) {
         final dir = io.Directory(path);
-        // 尝试列出目录内容来检查是否可访问
-        await dir.list().first;
+        // 尝试列出目录内容来检查是否可访问（空目录也算可访问）
+        await dir.list().take(1).toList();
         return true;
       }
       return false;
@@ -205,9 +195,8 @@ class PathUtils {
         raf.closeSync();
         return true;
       } else if (isDirectorySync(path)) {
-        final dir = io.Directory(path);
         // 尝试列出目录内容来检查是否可访问
-        dir.listSync().isNotEmpty;
+        io.Directory(path).listSync();
         return true;
       }
       return false;

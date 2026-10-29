@@ -1,19 +1,13 @@
-import 'dart:io' show File, Platform;
+import 'dart:async';
+import 'dart:convert' show utf8;
+import 'dart:io' show File;
 import 'package:flutter/foundation.dart' show Uint8List, kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:external_storage/external_storage.dart'
-    show ExternalStorage, FileInfo, StorageDevice, WatchEventType;
+    show ExternalStorage, FileInfo, StorageDevice, WatchEvent, WatchEventType;
 import 'package:open_file/open_file.dart' show OpenFile, ResultType;
 import 'package:path/path.dart' as path;
 import 'package:mime/mime.dart' show lookupMimeType;
-import 'package:permission_handler/permission_handler.dart'
-    show
-        Permission,
-        PermissionActions,
-        PermissionCheckShortcuts,
-        PermissionStatusGetters,
-        openAppSettings;
-import 'package:device_info_plus/device_info_plus.dart' show DeviceInfoPlugin;
 
 void main() {
   runApp(const MyApp());
@@ -62,13 +56,26 @@ class StorageDemoState extends State<StorageDemo> {
   FileInfo? _cutItem;
   bool _isCutOperationActive = false;
 
+  // 当前目录的监视：进入目录时订阅，离开时取消订阅即停止监视
+  StreamSubscription<WatchEvent>? _watchSubscription;
+  String? _watchedPath;
+  Timer? _reloadDebounce;
+
+  /// 只关心会改变目录列表的事件（不订阅 open / access 等读取事件）
+  static const _refreshEvents = [
+    WatchEventType.create,
+    WatchEventType.delete,
+    WatchEventType.modify,
+    WatchEventType.closeWrite,
+    WatchEventType.movedFrom,
+    WatchEventType.movedTo,
+  ];
+
   @override
   void initState() {
     super.initState();
     storage = widget.storage ?? ExternalStorage();
     _initializeStorage();
-    // 注册文件系统监听
-    storage.registerWatchEventCallback(_onFileSystemEvent);
   }
 
   Future<void> _initializeStorage() async {
@@ -104,52 +111,26 @@ class StorageDemoState extends State<StorageDemo> {
     }
   }
 
+  /// 使用插件自带的权限 API：
+  /// Android 11+ 跳转「所有文件访问权限」设置页，Android 6-10 弹出运行时权限框。
   Future<bool> _checkAndRequestPermissions() async {
-    if (Platform.isAndroid) {
-      final androidInfo = await DeviceInfoPlugin().androidInfo;
-
-      if (androidInfo.version.sdkInt >= 33) {
-        // Android 13+ (API 33+)
-        final images = await Permission.photos.request();
-        final videos = await Permission.videos.request();
-        final audio = await Permission.audio.request();
-        final manageStorage = await Permission.manageExternalStorage.request();
-
-        return images.isGranted &&
-            videos.isGranted &&
-            audio.isGranted &&
-            manageStorage.isGranted;
-      } else if (androidInfo.version.sdkInt >= 30) {
-        // Android 11+ (API 30+)
-        if (!await Permission.manageExternalStorage.isGranted) {
-          final status = await Permission.manageExternalStorage.request();
-          if (!status.isGranted) {
-            await openAppSettings();
-            return false;
-          }
-        }
-        return true;
-      } else {
-        // Android 10 及以下版本
-        final storage = await Permission.storage.request();
-        return storage.isGranted;
-      }
-    }
-    return true;
+    if (await storage.checkStoragePermissions()) return true;
+    return storage.requestStoragePermissions();
   }
 
   Future<void> _loadCurrentDirectory() async {
     setState(() => _isLoading = true);
     try {
       _addLog('开始加载目录: $_currentPath');
-      _currentEntries = await storage.listDirectory(_currentPath);
+      final entries = await storage.listDirectory(_currentPath);
+      // 目录在前，再按名称排序
+      entries.sort((a, b) => a.isDirectory != b.isDirectory
+          ? (a.isDirectory ? -1 : 1)
+          : a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+      _currentEntries = entries;
       _addLog('成功加载目录，共 ${_currentEntries.length} 个项目');
 
-      // 开始监听当前目录
-      if (_currentPath.isNotEmpty) {
-        await storage.startWatching(_currentPath);
-        _addLog('开始监听目录: $_currentPath');
-      }
+      _watchCurrentDirectory();
 
       setState(() {});
     } catch (e, s) {
@@ -162,11 +143,29 @@ class StorageDemoState extends State<StorageDemo> {
     }
   }
 
-  void _onFileSystemEvent(String path, WatchEventType event) {
-    _addLog('文件事件: ${event.name} - $path');
-    if (path.startsWith(_currentPath)) {
-      _loadCurrentDirectory();
-    }
+  /// 让监视跟随当前目录；回到设备列表时停止监视
+  void _watchCurrentDirectory() {
+    if (_watchedPath == _currentPath) return;
+    _watchSubscription?.cancel();
+    _watchSubscription = null;
+    _watchedPath = null;
+    if (_currentPath.isEmpty) return;
+
+    _watchedPath = _currentPath;
+    _watchSubscription = storage
+        .watch(_currentPath, events: _refreshEvents)
+        .listen(_onFileSystemEvent,
+            onError: (Object e) => _addLog('监听目录失败: $e'));
+    _addLog('开始监听目录: $_currentPath');
+  }
+
+  void _onFileSystemEvent(WatchEvent event) {
+    _addLog('文件事件: ${event.type.name} - ${event.path}');
+    // 一次复制 / 写入会产生一连串事件，合并成一次刷新
+    _reloadDebounce?.cancel();
+    _reloadDebounce = Timer(const Duration(milliseconds: 300), () {
+      if (mounted && _currentPath.isNotEmpty) _loadCurrentDirectory();
+    });
   }
 
   void _addLog(String message) {
@@ -231,7 +230,7 @@ class StorageDemoState extends State<StorageDemo> {
         counter++;
       }
 
-      final data = Uint8List.fromList('Hello, World!'.codeUnits);
+      final data = Uint8List.fromList(utf8.encode('Hello, World! 你好，世界！'));
       final bytesWritten = await storage.writeFile(testPath, data);
       _addLog('创建测试文件: $bytesWritten bytes at $testPath');
       await _loadCurrentDirectory();
@@ -338,6 +337,9 @@ class StorageDemoState extends State<StorageDemo> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(device.path),
+              if (device.uuid != null)
+                Text('UUID: ${device.uuid}'
+                    '${device.description != null ? ' (${device.description})' : ''}'),
               Text(
                   '可用: ${_formatSize(device.availableSize)} / 总共: ${_formatSize(device.totalSize)}'),
             ],
@@ -629,26 +631,17 @@ class StorageDemoState extends State<StorageDemo> {
       final isRootPath = _devices.any((device) => device.path == _currentPath);
 
       if (!isRootPath) {
-        await storage.stopWatching(_currentPath);
-        _addLog('停止监听目录: $_currentPath');
-
         final parentDir = path.dirname(_currentPath);
         if (parentDir != _currentPath) {
           if (!mounted) return false;
-          setState(() {
-            _currentPath = parentDir;
-            _loadCurrentDirectory();
-          });
+          setState(() => _currentPath = parentDir);
+          await _loadCurrentDirectory();
           return false;
         }
       } else {
-        await storage.stopWatching(_currentPath);
-        _addLog('停止监听目录: $_currentPath');
-
         if (!mounted) return false;
-        setState(() {
-          _currentPath = '';
-        });
+        setState(() => _currentPath = '');
+        _watchCurrentDirectory();
         return false;
       }
     }
@@ -740,9 +733,8 @@ class StorageDemoState extends State<StorageDemo> {
             IconButton(
               icon: const Icon(Icons.home),
               onPressed: () {
-                setState(() {
-                  _currentPath = '';
-                });
+                setState(() => _currentPath = '');
+                _watchCurrentDirectory();
               },
             ),
             IconButton(
@@ -883,8 +875,8 @@ class StorageDemoState extends State<StorageDemo> {
 
   @override
   void dispose() {
-    storage.unregisterWatchEventCallback();
-    storage.stopAllWatching();
+    _reloadDebounce?.cancel();
+    _watchSubscription?.cancel();
     super.dispose();
   }
 }

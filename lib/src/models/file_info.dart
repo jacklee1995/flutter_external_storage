@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart' show debugPrint;
+
 /// 文件信息模型
 class FileInfo {
   /// 文件名
@@ -60,8 +62,8 @@ class FileInfo {
         isHidden: map['isHidden'] as bool? ?? false,
       );
     } catch (e, s) {
-      print('Error creating FileInfo from map: $e\n$s');
-      print('Problematic map: $map');
+      debugPrint('Error creating FileInfo from map: $e\n$s');
+      debugPrint('Problematic map: $map');
       rethrow;
     }
   }

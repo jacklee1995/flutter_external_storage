@@ -35,6 +35,17 @@ enum WatchEventType {
   /// 自身被移动
   moveSelf;
 
+  /// 所有事件位之和（与 inotify 的 IN_ALL_EVENTS 相同）。
+  static const int allMask = 0xFFF;
+
+  /// 把事件列表合并为位掩码；空列表表示监听全部事件，返回 0。
+  static int maskOf(Iterable<WatchEventType> events) =>
+      events.fold(0, (mask, event) => mask | event.value);
+
+  /// 把位掩码拆成事件列表，忽略未知的位。
+  static List<WatchEventType> fromMask(int mask) =>
+      values.where((event) => (mask & event.value) != 0).toList();
+
   /// 获取对应的整数值
   int get value {
     switch (this) {

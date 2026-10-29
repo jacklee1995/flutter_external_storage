@@ -2,14 +2,14 @@ group = "tech.thispage.external_storage"
 version = "1.0-SNAPSHOT"
 
 buildscript {
-    ext.kotlin_version = "1.8.22"
+    ext.kotlin_version = "2.4.0"
     repositories {
         google()
         mavenCentral()
     }
 
     dependencies {
-        classpath("com.android.tools.build:gradle:8.1.0")
+        classpath("com.android.tools.build:gradle:9.1.0")
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version")
     }
 }
@@ -22,22 +22,24 @@ allprojects {
 }
 
 apply plugin: "com.android.library"
-apply plugin: "kotlin-android"
+
+// AGP 9+ compiles Kotlin itself (built-in Kotlin) and newer Flutter Gradle plugins apply KGP when
+// needed; only older AGP hosts need KGP applied here. The id is held in a variable on purpose so the
+// Flutter Gradle plugin's text-based KGP detection does not warn on AGP 9 hosts.
+def kgpId = "org.jetbrains.kotlin.android"
+def agpMajor = com.android.Version.ANDROID_GRADLE_PLUGIN_VERSION.tokenize(".")[0].toInteger()
+if (agpMajor < 9 && !pluginManager.hasPlugin(kgpId)) {
+    apply plugin: kgpId
+}
 
 android {
-    if (project.android.hasProperty("namespace")) {
-        namespace = "tech.thispage.external_storage"
-    }
+    namespace = "tech.thispage.external_storage"
 
-    compileSdk = 34
+    compileSdk = 36
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
-    }
-
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     sourceSets {
@@ -50,19 +52,27 @@ android {
     }
 
     dependencies {
+        implementation("androidx.annotation:annotation:1.9.1")
         testImplementation("org.jetbrains.kotlin:kotlin-test")
-        testImplementation("org.mockito:mockito-core:5.0.0")
+        testImplementation("org.mockito:mockito-core:5.20.0")
     }
 
     testOptions {
-        unitTests.all {
-            useJUnitPlatform()
+        unitTests {
+            returnDefaultValues = true
+            all {
+                useJUnitPlatform()
 
-            testLogging {
-               events "passed", "skipped", "failed", "standardOut", "standardError"
-               outputs.upToDateWhen {false}
-               showStandardStreams = true
+                testLogging {
+                    events "passed", "skipped", "failed", "standardOut", "standardError"
+                    outputs.upToDateWhen { false }
+                    showStandardStreams = true
+                }
             }
         }
     }
+}
+
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinJvmCompile).configureEach {
+    compilerOptions.jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
 }

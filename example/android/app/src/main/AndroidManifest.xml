@@ -1,18 +1,13 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Android 13+ (API 33+) 细分存储权限 -->
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
-    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
-    
-    <!-- Android 14+ (API 34+) 照片和视频访问权限 -->
-    <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
-
-    <!-- Android 10 及以下版本的存储权限 -->
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
-
-    <!-- 所有文件访问权限 (需要用户在系统设置中手动授予) -->
-    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+    <!--
+      Android 11+ 所有文件访问权限（需用户在系统设置中手动授予）。
+      插件不再替宿主声明此权限：上架 Google Play 需要通过权限声明审核。
+      READ/WRITE_EXTERNAL_STORAGE（Android 10 及以下）由插件 Manifest 自动合并。
+    -->
+    <uses-permission
+        android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
+        tools:ignore="ScopedStorage" />
 
     <application
         android:label="external_storage_example"
