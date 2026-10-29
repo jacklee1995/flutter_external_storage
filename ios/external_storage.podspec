@@ -4,7 +4,7 @@
 #
 Pod::Spec.new do |s|
   s.name             = 'external_storage'
-  s.version          = '0.1.0'
+  s.version          = '1.0.0'
   s.summary          = 'Storage volumes, file operations and file watching for Flutter.'
   s.description      = <<-DESC
 iOS implementation of the external_storage Flutter plugin (storage volume information and settings access).

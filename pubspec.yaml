@@ -1,6 +1,6 @@
 name: external_storage
 description: "Android & iOS storage plugin: storage volumes (SD card / USB UUID), file and directory operations, file system watching and storage permission handling."
-version: 0.1.0
+version: 1.0.0
 homepage: https://github.com/jacklee1995/flutter_external_storage
 repository: https://github.com/jacklee1995/flutter_external_storage
 issue_tracker: https://github.com/jacklee1995/flutter_external_storage/issues

@@ -43,7 +43,7 @@ inotify 监视由原生代码实现。
 
 ```yaml
 dependencies:
-  external_storage: ^latest_version
+  external_storage: ^1.0.0
 ```
 
 然后执行 Flutter 包获取命令：

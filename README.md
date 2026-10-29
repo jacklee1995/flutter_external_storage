@@ -44,7 +44,7 @@ Add the following dependency to your `pubspec.yaml` file:
 
 ```yaml
 dependencies:
-  external_storage: ^latest_version
+  external_storage: ^1.0.0
 ```
 
 Then execute the Flutter package retrieval command:
